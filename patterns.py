@@ -1,16 +1,27 @@
+from math import ceil
+from typing import Dict, List, Tuple, Union
+
+
+MIN = 90
+MAX = 110 + 1 # This is for open-interval range().
+
+# Some patterns may not match, so None is a valid return type
+POSSIBLE_PATTERNS = Union[Dict[str, Tuple[int, int]], None]
+
 class Pattern:
     """Represents a generic pattern.
 
     Attributes:
         buy_price (int): the buy price of turnips on Sunday
+        current (List[Tuple[int]]): a list of min- and max prices in
+            the current iteration, with index 0 as Monday AM and
+            index 11 (last) as Saturday PM
         CONS_DECREASE (float): the constant decrease delta;
             used in `decrease`
         DEC_UPPER (float): the amount to decrease per iteration of
             `decrease` for the upper bound
         DEC_LOWER (float): same as `DEC_UPPER` but for lower bound
         N_PHASES (int): number of phases, i.e. 12 = 6 days * 2 phases
-        phase (int): 0-index value corresponding to day and period,
-            e.g. Monday AM is 0, Monday PM is 1, etc.
         possible (POSSIBLE_PATTERNS): possible market outcomes
         prices (List[int]): prices from Monday AM through Saturday PM
         RAND_DECREASE (float): maximum random decrease; used in
@@ -24,7 +35,7 @@ class Pattern:
     CONS_DECREASE = 0.03
     RAND_DECREASE = 0.02
 
-    def __init__(self, buy_price: int, prices: List[int]) -> None:
+    def __init__(self, buy_price: int) -> None:
         """Initialize using buy price and available prices.
 
         Args:
@@ -33,35 +44,8 @@ class Pattern:
 
         """
         self.buy_price = buy_price
-        self.prices = prices
+        self.current = []
         self.possible = {}
-
-    def in_range(self, delta: int) -> bool:
-        """Is the actual price in range of predictions?
-        If `self.prices[phase]` is 0 (an unknown), this will also
-        return True.
-
-        Args:
-            delta (int): the difference of phase from current step
-
-        Returns:
-            bool: True if in range or data is 0; otherwise False
-
-        """
-        phase = self.phase + delta
-        return (
-            self.prices[phase] == 0
-            or self.prices[phase] in range(self.lower, self.upper + 1)
-            )
-
-    def increase_phase(self, increase: int) -> None:
-        """Increase the current phase.
-
-        Args:
-            increase (int): how much to increment phase by
-
-        """
-        self.phase += increase
 
     def reset_values(self) -> None:
         """Reset both guarantee, upper and lower bounds, and phase
@@ -70,7 +54,7 @@ class Pattern:
         self.min_guarantee = self.buy_price
         self.upper = self.buy_price
         self.lower = self.buy_price
-        self.phase = 0
+        self.current = []
 
     def check_guarantees(self) -> None:
         """Check guarantees and update them if they are lower (upper)
@@ -81,9 +65,10 @@ class Pattern:
             self.max_guarantee = self.upper
         if self.lower < self.min_guarantee:
             self.min_guarantee = self.lower
+        self.current.append(f'{self.lower}-{self.upper}')
 
     def modify(
-        self, loops: int, upper_coef: float = None, lower_coef: float = None,
+        self, loops: int, lower_coef: float = None, upper_coef: float = None,
         disp: int = 0
         ) -> None:
         """Apply the modify strategy to upper and lower limits.
@@ -92,9 +77,9 @@ class Pattern:
 
         Args:
             loops (int): number of loops to attempt
-            upper_coef (float, optional): upper bound coefficient;
-                defaults to None
             lower_coef (float, optional): lower bound coefficient;
+                defaults to None
+            upper_coef (float, optional): upper bound coefficient;
                 defaults to None
             disp (int, optional): displaces value, used in pattern 3
 
@@ -108,13 +93,9 @@ class Pattern:
             lower_coef = self.MOD_LOWER
 
         for loop in range(loops):
-            self.upper = ceil(upper_coef * self.upper) + disp
-            self.lower = ceil(lower_coef * self.lower) + disp
-            if not self.in_range(loop):
-                raise ValueError
-
-        self.check_guarantees()
-        self.increase_phase(loops)
+            self.upper = ceil(upper_coef * self.buy_price) + disp
+            self.lower = ceil(lower_coef * self.buy_price) + disp
+            self.check_guarantees()
 
     def decrease(self, loops: int) -> None:
         """Apply the decrease strategy to upper and lower limits,
@@ -132,14 +113,10 @@ class Pattern:
         u_coef = self.CONS_DECREASE
         l_coef = u_coef + self.RAND_DECREASE
         for loop in range(loops):
-            on = 1 if i > 0 else 0
-            self.upper = ceil((self.DEC_UPPER - u_coef * on) * self.upper)
-            self.lower = ceil((self.DEC_LOWER - l_coef * on) * self.lower)
-            if not self.in_range(loop):
-                raise ValueError
-
-        self.check_guarantees()
-        self.increase_phase(loops)
+            on = 1 if loop > 0 else 0
+            self.upper = ceil((self.DEC_UPPER - u_coef * on) * self.buy_price)
+            self.lower = ceil((self.DEC_LOWER - l_coef * on) * self.buy_price)
+            self.check_guarantees()
 
 
 class Pattern_0(Pattern):
@@ -169,31 +146,16 @@ class Pattern_0(Pattern):
                     for dec_b in range(5 - dec_a):
                         for inc_b in range(inc_b_c - inc_c):
                             self.reset_values()
-                            try:
-                                self.modify(inc_a)
-                            except ValueError:
-                                # This is a short circuit. Since this
-                                # is the first step in the pattern, we
-                                # should abort subsequent runs once it
-                                # doesn't match.
-                                return self.possible
-
-                            try:
-                                self.decrease(dec_a)
-                                self.modify(inc_b)
-                                self.decrease(dec_b)
-                                self.modify(inc_c)
-                            except ValueError:
-                                continue
-
-                            identifier = (
-                                f'{inc_a}{dec_a}{inc_b}{dec_b}{inc_c}-'
-                                f'{r_a}{r_b}'
-                                )
-                            self.possible[identifier] = (
-                                self.max_guarantee,
+                            self.modify(inc_a)
+                            self.decrease(dec_a)
+                            self.modify(inc_b)
+                            self.decrease(dec_b)
+                            self.modify(inc_c)
+                            self.possible[':'.join(self.current)] = (
                                 self.min_guarantee,
+                                self.max_guarantee,
                                 )
+        return self.possible
 
 
 class Pattern_1(Pattern):
@@ -228,21 +190,17 @@ class Pattern_1(Pattern):
         """
         for peak in range(self.PEAK_START, self.PEAK_END):
             self.reset_values()
-            try:
-                self.decrease(peak)
-                for l_coef, u_coef in self.PAIRS:
-                    self.modify(1, l_coef, u_coef)
-                self.modify(
-                    self.N_PHASES - peak, self.MOD_E, self.MOD_A
-                    )
-            except ValueError:
-                continue
-
-            identifier = f'{peak}'
-            self.possible[identifier] = (
-                self.max_guarantee,
-                self.min_guarantee,
+            self.decrease(peak)
+            for l_coef, u_coef in self.PAIRS:
+                self.modify(1, l_coef, u_coef)
+            self.modify(
+                self.N_PHASES - peak, self.MOD_E, self.MOD_A
                 )
+            self.possible[':'.join(self.current)] = (
+                self.min_guarantee,
+                self.max_guarantee,
+                )
+        return self.possible
 
 
 class Pattern_2(Pattern):
@@ -262,15 +220,13 @@ class Pattern_2(Pattern):
 
         """
         self.reset_values()
-        try:
-            self.decrease(self.N_PHASES)
-        except ValueError:
-            return
+        self.decrease(self.N_PHASES)
 
-        self.possible['1'] = (
-            self.max_guarantee,
+        self.possible[':'.join(self.current)] = (
             self.min_guarantee,
+            self.max_guarantee,
             )
+        return self.possible
 
 
 class Pattern_3(Pattern):
@@ -292,23 +248,6 @@ class Pattern_3(Pattern):
     DEC_UPPER = 0.9
     DEC_LOWER = 0.4
 
-    def match(self, rate: float) -> None:
-        """Checks whether the value matches in range, after multiplying
-        both upper and lower bounds by `rate`. Similar to `modify`, but
-        only used in pattern 3 and only iterates once.
-
-        Args:
-            rate (float): the rate to multiply; should be between
-                1.4 and 2
-
-        """
-        self.upper = ceil(self.upper * rate)
-        self.lower = ceil(self.lower * rate)
-        if not self.in_range(0):
-            raise ValueError
-
-        self.phase += 1
-
     def run(self) -> POSSIBLE_PATTERNS:
         """Run every possible combination in this pattern.
 
@@ -319,17 +258,14 @@ class Pattern_3(Pattern):
         """
         for peak in range(self.PEAK_START, self.PEAK_END):
             self.reset_values()
-            try:
-                self.decrease(peak)
-                for _ in range(2):
-                    self.modify(1, MOD_A, MOD_B)
-                self.modify(3, MOD_B, MOD_C)
-                self.decrease(self.N_PHASES - peak)
-            except ValueError:
-                continue
+            self.decrease(peak)
+            for _ in range(2):
+                self.modify(1, self.MOD_A, self.MOD_B)
+            self.modify(3, self.MOD_B, self.MOD_C)
+            self.decrease(self.N_PHASES - peak)
 
-            identifier = f'{peak}'
-            self.possible[identifier] = (
-                self.max_guarantee,
+            self.possible[':'.join(self.current)] = (
                 self.min_guarantee,
+                self.max_guarantee,
                 )
+        return self.possible

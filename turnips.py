@@ -1,3 +1,6 @@
+from patterns import Pattern_0, Pattern_1, Pattern_2, Pattern_3
+
+import yaml
 
 # Ported from:
 #   https://gist.github.com/Treeki/85be14d297c80c8b3c0a76375743325b
@@ -14,10 +17,11 @@ PATTERNS = {
     '❔': "if you don't know or don't remember your previous pattern",
     }
 
-class Calculator:
-    """Class module for calculating turnip prices."""
+class Mapper:
+    """Class module for mapping turnip prices."""
+    patterns = [Pattern_0, Pattern_1, Pattern_2, Pattern_3]
 
-    def __init__(self, prices: List[int]) -> None:
+    def __init__(self) -> None:
         """Initialize the calculator given current prices, including
         last week's pattern. The list structure corresponds to a row
         in the database:
@@ -38,14 +42,22 @@ class Calculator:
                 - 3: decreasing, spike, decreasing
 
         """
-        self.buy_price = prices[1]
-        self.prices = prices[2:]
-        self.possible_patterns = []
+        self.possible_patterns = {}
 
     def run(self) -> None:
         """Run every pattern to find any matches."""
-        for pattern in [Pattern_0, Pattern_1, Pattern_2, Pattern_3]:
-            p = pattern(self.buy_price, self.prices)
-            self.possible_patterns.append(p.run())
+        for n, pattern in enumerate(self.patterns):
+            self.possible_patterns[n] = {}
+            for bp in range(MIN, MAX):
+                self.possible_patterns[n][bp] = []
+                p = pattern(bp)
+                self.possible_patterns[n][bp].append(p.run())
+
+        return self.possible_patterns
 
 
+if __name__ == '__main__':
+    mapper = Mapper()
+    d = mapper.run()
+    with open('turnips.yaml', 'w') as f:
+        yaml.safe_dump(d, stream=f)
