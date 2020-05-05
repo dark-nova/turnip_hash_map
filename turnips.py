@@ -1,12 +1,7 @@
-from patterns import Pattern_0, Pattern_1, Pattern_2, Pattern_3
+from patterns import Pattern_0, Pattern_1, Pattern_2, Pattern_3, MIN, MAX
 
 import yaml
 
-# Ported from:
-#   https://gist.github.com/Treeki/85be14d297c80c8b3c0a76375743325b
-
-MIN = 90
-MAX = 110 + 1 # This is for open-interval range().
 
 N_EMOJI = '\N{combining enclosing keycap}'
 PATTERNS = {

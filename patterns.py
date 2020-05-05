@@ -2,6 +2,9 @@ from math import ceil
 from typing import Dict, List, Tuple, Union
 
 
+# Ported from:
+#   https://gist.github.com/Treeki/85be14d297c80c8b3c0a76375743325b
+
 MIN = 90
 MAX = 110 + 1 # This is for open-interval range().
 
@@ -143,18 +146,18 @@ class Pattern_0(Pattern):
             inc_b_c = 7 - inc_a
             for dec_a in [2, 3]:
                 for inc_c in range(inc_b_c - 1):
-                    for dec_b in range(5 - dec_a):
-                        for inc_b in range(inc_b_c - inc_c):
-                            self.reset_values()
-                            self.modify(inc_a)
-                            self.decrease(dec_a)
-                            self.modify(inc_b)
-                            self.decrease(dec_b)
-                            self.modify(inc_c)
-                            self.possible[':'.join(self.current)] = (
-                                self.min_guarantee,
-                                self.max_guarantee,
-                                )
+                    dec_b = 5 - dec_a
+                    inc_b = inc_b_c - inc_c
+                    self.reset_values()
+                    self.modify(inc_a)
+                    self.decrease(dec_a)
+                    self.modify(inc_b)
+                    self.decrease(dec_b)
+                    self.modify(inc_c)
+                    self.possible[':'.join(self.current)] = (
+                        self.min_guarantee,
+                        self.max_guarantee,
+                        )
         return self.possible
 
 
