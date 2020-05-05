@@ -68,7 +68,7 @@ class Pattern:
             self.max_guarantee = self.upper
         if self.lower < self.min_guarantee:
             self.min_guarantee = self.lower
-        self.current.append(f'{self.lower}-{self.upper}')
+        self.current.append((self.lower, self.upper))
 
     def modify(
         self, loops: int, lower_coef: float = None, upper_coef: float = None,
@@ -121,6 +121,23 @@ class Pattern:
             self.lower = ceil((self.DEC_LOWER - l_coef * on) * self.buy_price)
             self.check_guarantees()
 
+    def convert_current(self) -> None:
+        """Convert self.current to dicts of depth 12, equal to number
+        of total phases from Monday AM through Saturday PM.
+
+        Once converted, sets self.possible to this new dict.
+
+        """
+        for i, (lower, upper) in enumerate(self.current[::-1]):
+            if i != 0:
+                current = {
+                    (lower, upper): last
+                    }
+                last = current
+            else:
+                last = [lower, lower]
+        self.possible = last
+
 
 class Pattern_0(Pattern):
     """Represents turnip pattern 0:
@@ -154,10 +171,7 @@ class Pattern_0(Pattern):
                     self.modify(inc_b)
                     self.decrease(dec_b)
                     self.modify(inc_c)
-                    self.possible[':'.join(self.current)] = (
-                        self.min_guarantee,
-                        self.max_guarantee,
-                        )
+                    self.convert_current()
         return self.possible
 
 
@@ -197,12 +211,9 @@ class Pattern_1(Pattern):
             for l_coef, u_coef in self.PAIRS:
                 self.modify(1, l_coef, u_coef)
             self.modify(
-                self.N_PHASES - peak, self.MOD_E, self.MOD_A
+                self.N_PHASES - peak - len(self.PAIRS), self.MOD_E, self.MOD_A
                 )
-            self.possible[':'.join(self.current)] = (
-                self.min_guarantee,
-                self.max_guarantee,
-                )
+            self.convert_current()
         return self.possible
 
 
@@ -224,11 +235,7 @@ class Pattern_2(Pattern):
         """
         self.reset_values()
         self.decrease(self.N_PHASES)
-
-        self.possible[':'.join(self.current)] = (
-            self.min_guarantee,
-            self.max_guarantee,
-            )
+        self.convert_current()
         return self.possible
 
 
@@ -245,8 +252,6 @@ class Pattern_3(Pattern):
     MOD_A = 0.9
     MOD_B = 1.4
     MOD_C = 2.0
-    MOD_D = 6.0
-    MOD_E = 0.4
 
     DEC_UPPER = 0.9
     DEC_LOWER = 0.4
@@ -262,13 +267,8 @@ class Pattern_3(Pattern):
         for peak in range(self.PEAK_START, self.PEAK_END):
             self.reset_values()
             self.decrease(peak)
-            for _ in range(2):
-                self.modify(1, self.MOD_A, self.MOD_B)
+            self.modify(2, self.MOD_A, self.MOD_B)
             self.modify(3, self.MOD_B, self.MOD_C)
-            self.decrease(self.N_PHASES - peak)
-
-            self.possible[':'.join(self.current)] = (
-                self.min_guarantee,
-                self.max_guarantee,
-                )
+            self.decrease(self.N_PHASES - peak - 5)
+            self.convert_current()
         return self.possible
