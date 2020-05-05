@@ -48,7 +48,7 @@ class Pattern:
         """
         self.buy_price = buy_price
         self.current = []
-        self.possible = {}
+        self.possible = []
 
     def reset_values(self) -> None:
         """Reset both guarantee, upper and lower bounds, and phase
@@ -136,7 +136,7 @@ class Pattern:
                 last = current
             else:
                 last = [lower, lower]
-        self.possible = last
+        self.possible.append(last)
 
 
 class Pattern_0(Pattern):
