@@ -113,9 +113,8 @@ class Pattern:
         u_coef = self.CONS_DECREASE
         l_coef = u_coef + self.RAND_DECREASE
         for loop in range(loops):
-            on = 1 if loop > 0 else 0
-            self.upper = ceil((self.DEC_UPPER - u_coef * on) * self.buy_price)
-            self.lower = ceil((self.DEC_LOWER - l_coef * on) * self.buy_price)
+            self.upper = ceil((self.DEC_UPPER - u_coef * loop) * self.buy_price)
+            self.lower = ceil((self.DEC_LOWER - l_coef * loop) * self.buy_price)
             self.check_guarantees()
 
     def convert_current(self) -> None:
