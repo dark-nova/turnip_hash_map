@@ -5,27 +5,24 @@ from typing import Dict, List, Tuple, Union
 # Ported from:
 #   https://gist.github.com/Treeki/85be14d297c80c8b3c0a76375743325b
 
-MIN = 90
-MAX = 110 + 1 # This is for open-interval range().
 
-# Some patterns may not match, so None is a valid return type
-POSSIBLE_PATTERNS = Union[Dict[str, Tuple[int, int]], None]
+PATTERNS = List[List[Tuple[int, int]]]
+
 
 class Pattern:
     """Represents a generic pattern.
 
     Attributes:
         buy_price (int): the buy price of turnips on Sunday
-        current (List[Tuple[int]]): a list of min- and max prices in
-            the current iteration, with index 0 as Monday AM and
-            index 11 (last) as Saturday PM
         CONS_DECREASE (float): the constant decrease delta;
             used in `decrease`
         DEC_UPPER (float): the amount to decrease per iteration of
             `decrease` for the upper bound
         DEC_LOWER (float): same as `DEC_UPPER` but for lower bound
         N_PHASES (int): number of phases, i.e. 12 = 6 days * 2 phases
-        possible (POSSIBLE_PATTERNS): possible market outcomes
+        patterns (PATTERNS): a list of min- and max prices in
+            the current iteration, with index 0 as Monday AM and
+            index 11 (last) as Saturday PM
         prices (List[int]): prices from Monday AM through Saturday PM
         RAND_DECREASE (float): maximum random decrease; used in
             `decrease`
@@ -48,7 +45,7 @@ class Pattern:
         """
         self.buy_price = buy_price
         self.current = []
-        self.possible = []
+        self.patterns = []
 
     def reset_values(self) -> None:
         """Reset both guarantee, upper and lower bounds, and phase
@@ -125,18 +122,10 @@ class Pattern:
         """Convert self.current to dicts of depth 12, equal to number
         of total phases from Monday AM through Saturday PM.
 
-        Once converted, sets self.possible to this new dict.
+        Once converted, sets self.patterns to this new dict.
 
         """
-        for i, (lower, upper) in enumerate(self.current[::-1]):
-            if i != 0:
-                current = {
-                    (lower, upper): last
-                    }
-                last = current
-            else:
-                last = [lower, lower]
-        self.possible.append(last)
+        self.patterns.append(self.current)
 
 
 class Pattern_0(Pattern):
@@ -151,11 +140,11 @@ class Pattern_0(Pattern):
     CONS_DECREASE = 0.04
     RAND_DECREASE = 0.06
 
-    def run(self) -> POSSIBLE_PATTERNS:
+    def run(self) -> PATTERNS:
         """Run every possible combination in this pattern.
 
         Returns:
-            POSSIBLE_PATTERNS: represents pattern (keys) and
+            PATTERNS: represents pattern (keys) and
                 guaranteed maximum and minimum (Tuple[int, int])
 
         """
@@ -172,7 +161,7 @@ class Pattern_0(Pattern):
                     self.decrease(dec_b)
                     self.modify(inc_c)
                     self.convert_current()
-        return self.possible
+        return self.patterns
 
 
 class Pattern_1(Pattern):
@@ -197,11 +186,11 @@ class Pattern_1(Pattern):
         (MOD_A, MOD_B),
         ]
 
-    def run(self) -> POSSIBLE_PATTERNS:
+    def run(self) -> PATTERNS:
         """Run every possible combination in this pattern.
 
         Returns:
-            POSSIBLE_PATTERNS: represents pattern (keys) and
+            PATTERNS: represents pattern (keys) and
                 guaranteed maximum and minimum (Tuple[int, int])
 
         """
@@ -214,7 +203,7 @@ class Pattern_1(Pattern):
                 self.N_PHASES - peak - len(self.PAIRS), self.MOD_E, self.MOD_A
                 )
             self.convert_current()
-        return self.possible
+        return self.patterns
 
 
 class Pattern_2(Pattern):
@@ -225,18 +214,18 @@ class Pattern_2(Pattern):
     so if the pattern doesn't match, immediately return.
 
     """
-    def run(self) -> POSSIBLE_PATTERNS:
+    def run(self) -> PATTERNS:
         """Run the pattern.
 
         Returns:
-            POSSIBLE_PATTERNS: represents pattern (keys) and
+            PATTERNS: represents pattern (keys) and
                 guaranteed maximum and minimum (Tuple[int, int])
 
         """
         self.reset_values()
         self.decrease(self.N_PHASES)
         self.convert_current()
-        return self.possible
+        return self.patterns
 
 
 class Pattern_3(Pattern):
@@ -256,11 +245,11 @@ class Pattern_3(Pattern):
     DEC_UPPER = 0.9
     DEC_LOWER = 0.4
 
-    def run(self) -> POSSIBLE_PATTERNS:
+    def run(self) -> PATTERNS:
         """Run every possible combination in this pattern.
 
         Returns:
-            POSSIBLE_PATTERNS: represents pattern (keys) and
+            PATTERNS: represents pattern (keys) and
                 guaranteed maximum and minimum (Tuple[int, int])
 
         """
@@ -271,4 +260,4 @@ class Pattern_3(Pattern):
             self.modify(3, self.MOD_B, self.MOD_C)
             self.decrease(self.N_PHASES - peak - 5)
             self.convert_current()
-        return self.possible
+        return self.patterns

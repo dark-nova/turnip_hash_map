@@ -1,6 +1,6 @@
-from patterns import Pattern_0, Pattern_1, Pattern_2, Pattern_3, MIN, MAX
-
 import yaml
+
+from patterns import Pattern_0, Pattern_1, Pattern_2, Pattern_3
 
 
 N_EMOJI = '\N{combining enclosing keycap}'
@@ -11,6 +11,10 @@ PATTERNS = {
     f'3{N_EMOJI}': 'decreasing, spike, decreasing (small spike)',
     '❔': "if you don't know or don't remember your previous pattern",
     }
+
+MIN = 90
+MAX = 110 + 1 # This is for open-interval range().
+
 
 class Mapper:
     """Class module for mapping turnip prices."""
@@ -37,18 +41,17 @@ class Mapper:
                 - 3: decreasing, spike, decreasing
 
         """
-        self.possible_patterns = {}
+        self.pattern_seqs = {}
 
     def run(self) -> None:
         """Run every pattern to find any matches."""
         for n, pattern in enumerate(self.patterns):
-            self.possible_patterns[n] = {}
+            self.pattern_seqs[n] = {}
             for bp in range(MIN, MAX):
-                self.possible_patterns[n][bp] = []
                 p = pattern(bp)
-                self.possible_patterns[n][bp].append(p.run())
+                self.pattern_seqs[n][bp] = p.run()
 
-        return self.possible_patterns
+        return self.pattern_seqs
 
 
 if __name__ == '__main__':
